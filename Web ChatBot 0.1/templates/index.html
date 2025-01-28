@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Educativo</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            font-family: 'Georgia', serif;
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+        #chat-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #fafafa;
+            text-align: left;
+        }
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 1em;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 1em;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .dark-mode {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        .dark-mode .chat-container {
+            background-color: #333;
+            color: #fff;
+        }
+        .dark-mode #chat-box {
+            background-color: #444;
+            border-color: #555;
+        }
+        .dark-mode input[type="text"] {
+            background-color: #555;
+            color: #fff;
+            border-color: #777;
+        }
+        .dark-mode button {
+            background-color: #008CBA;
+        }
+        .dark-mode button:hover {
+            background-color: #005f75;
+        }
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007BFF;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .dark-mode-toggle:hover {
+            background-color: #0056b3;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        /* Media queries para pantallas más pequeñas */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .chat-container {
+                width: 100%;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            button, input[type="text"] {
+                font-size: 1em;
+                padding: 8px;
+            }
+            #chat-box {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.3em;
+            }
+            .dark-mode-toggle {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+        }
+    </style>
+    <script type="text/javascript" async
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js">
+    </script>
+</head>
+<body>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌓</button>
+    <div class="chat-container">
+        <h1>Chatbot Educativo</h1>
+        <div id="chat-box"></div>
+        <input type="text" id="user-input" placeholder="Escribe tu pregunta aquí...">
+        <button onclick="sendMessage()">Enviar</button>
+
+        <button onclick="toggleMemoria()">Activar/Desactivar Modo Memoria</button>
+        <p id="estado-memoria" class="status">Modo Memoria Desactivado</p>
+
+        <button onclick="generarStudentID()">StudentID</button>
+    </div>
+
+    <script>
+        let modoMemoria = false;
+
+        function toggleMemoria() {
+            fetch('/toggle_memoria', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                modoMemoria = !modoMemoria;
+                document.getElementById('estado-memoria').innerText = `Modo Memoria ${modoMemoria ? 'Activado' : 'Desactivado'}`;
+            })
+            .catch(error => {
+                alert('Error al cambiar el estado del modo memoria: ' + error);
+            });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function sendMessage() {
+            let userInput = document.getElementById('user-input').value;
+            if (userInput.trim() === '') return;
+
+            let chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>Tú:</strong> ${userInput}</p>`;
+            document.getElementById('user-input').value = '';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: userInput})
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.innerHTML += `<p>${data.response}</p>`;
+                MathJax.typeset();
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                chatBox.innerHTML += `<p style='color: red;'>Error: ${error}</p>`;
+            });
+        }
+
+        function generarStudentID() {
+            let chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>Solicitando StudentID...</strong></p>`;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "Genera un resumen sobre mis hábitos de estudio, intereses académicos, fortalezas y debilidades basándote en nuestra conversación."
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.innerHTML += `<p><strong>StudentID:</strong><br>${data.response}</p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                chatBox.innerHTML += `<p style='color: red;'>Error: ${error}</p>`;
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
