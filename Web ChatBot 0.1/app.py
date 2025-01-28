@@ -17,14 +17,14 @@ modo_memoria_activado = False  # Inicialmente, el modo memoria está desactivado
 def cargar_historial():
     global conversation_history
     try:
-        with open("../modo_memoria.json", "r") as f:
+        with open("modo_memoria.json", "r") as f:
             conversation_history = json.load(f)
     except FileNotFoundError:
         conversation_history = []
 
 # Función para guardar el historial en un archivo JSON
 def guardar_historial():
-    with open("../modo_memoria.json", "w") as f:
+    with open("modo_memoria.json", "w") as f:
         json.dump(conversation_history, f)
 
 # Ruta para la página principal
