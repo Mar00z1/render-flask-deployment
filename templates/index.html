@@ -11,27 +11,25 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 10px;
             transition: background-color 0.3s, color 0.3s;
         }
         .chat-container {
-            width: 50%;
+            width: 100%;
             max-width: 600px;
             background-color: #ffffff;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-            transition: background-color 0.3s, color 0.3s;
         }
         h1 {
             font-family: 'Georgia', serif;
             color: #333;
-            transition: color 0.3s;
-        }
-        .dark-mode h1 {
-            color: #ffffff;
+            font-size: 1.8em;
+            margin-bottom: 20px;
         }
         #chat-box {
             height: 300px;
@@ -48,6 +46,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             margin-top: 10px;
+            font-size: 1em;
         }
         button {
             width: 100%;
@@ -58,6 +57,7 @@
             border-radius: 5px;
             cursor: pointer;
             margin-top: 10px;
+            font-size: 1em;
         }
         button:hover {
             background-color: #0056b3;
@@ -86,9 +86,9 @@
             background-color: #005f75;
         }
         .dark-mode-toggle {
-            position: absolute;
+            position: fixed;
             top: 20px;
-            left: 20px;
+            right: 20px;
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -97,6 +97,7 @@
             color: white;
             font-size: 16px;
             cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
         .dark-mode-toggle:hover {
             background-color: #0056b3;
@@ -105,6 +106,38 @@
             max-width: 100%;
             height: auto;
             border-radius: 5px;
+        }
+
+        /* Media queries para pantallas más pequeñas */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .chat-container {
+                width: 100%;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            button, input[type="text"] {
+                font-size: 1em;
+                padding: 8px;
+            }
+            #chat-box {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.3em;
+            }
+            .dark-mode-toggle {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
         }
     </style>
     <script type="text/javascript" async
@@ -119,18 +152,15 @@
         <input type="text" id="user-input" placeholder="Escribe tu pregunta aquí...">
         <button onclick="sendMessage()">Enviar</button>
 
-        <!-- Botón para activar/desactivar el modo memoria -->
         <button onclick="toggleMemoria()">Activar/Desactivar Modo Memoria</button>
-        <p id="estado-memoria" class="status">Modo Memoria Desactivado</p> <!-- Muestra el estado del modo memoria -->
+        <p id="estado-memoria" class="status">Modo Memoria Desactivado</p>
 
-        <!-- Botón para ver el StudentID -->
         <button onclick="generarStudentID()">StudentID</button>
     </div>
 
     <script>
-        let modoMemoria = false;  // Variable para gestionar el estado del modo memoria
+        let modoMemoria = false;
 
-        // Función para alternar el modo memoria
         function toggleMemoria() {
             fetch('/toggle_memoria', {
                 method: 'POST',
@@ -138,7 +168,7 @@
             })
             .then(response => response.json())
             .then(data => {
-                modoMemoria = !modoMemoria;  // Cambiar el estado del modo memoria
+                modoMemoria = !modoMemoria;
                 document.getElementById('estado-memoria').innerText = `Modo Memoria ${modoMemoria ? 'Activado' : 'Desactivado'}`;
             })
             .catch(error => {
@@ -146,12 +176,10 @@
             });
         }
 
-        // Función para alternar entre modo claro y modo oscuro
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
         }
 
-        // Función para enviar mensaje
         function sendMessage() {
             let userInput = document.getElementById('user-input').value;
             if (userInput.trim() === '') return;
@@ -167,9 +195,8 @@
             })
             .then(response => response.json())
             .then(data => {
-                let formattedResponse = procesarTexto(data.response);
-                chatBox.innerHTML += formattedResponse;
-                MathJax.typeset();  // Renderizar ecuaciones LaTeX
+                chatBox.innerHTML += `<p>${data.response}</p>`;
+                MathJax.typeset();
                 chatBox.scrollTop = chatBox.scrollHeight;
             })
             .catch(error => {
@@ -177,69 +204,26 @@
             });
         }
 
-        // Función para ver lo aprendido
         function generarStudentID() {
-        let chatBox = document.getElementById('chat-box');
-        chatBox.innerHTML += `<p><strong>Solicitando StudentID...</strong></p>`;
+            let chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>Solicitando StudentID...</strong></p>`;
 
-        fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: "Genera un resumen sobre mis hábitos de estudio, intereses académicos, fortalezas y debilidades basándote en nuestra conversación."
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "Genera un resumen sobre mis hábitos de estudio, intereses académicos, fortalezas y debilidades basándote en nuestra conversación."
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            let formattedResponse = procesarTexto(data.response);
-            chatBox.innerHTML += `<p><strong>StudentID:</strong><br>${formattedResponse}</p>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-        })
-        .catch(error => {
-            chatBox.innerHTML += `<p style='color: red;'>Error: ${error}</p>`;
-        });
-    }
-
-        // Función para procesar el texto
-        function procesarTexto(texto) {
-            let textoProcesado = convertirMarkdownTitulos(texto);
-            textoProcesado = convertirNegrita(textoProcesado);
-            textoProcesado = convertirImagenes(textoProcesado);
-            textoProcesado = manejarSaltosDeLinea(textoProcesado);
-            return textoProcesado;
-        }
-
-        // Funciones auxiliares de procesamiento de texto
-        function convertirImagenes(texto) {
-            const regexUrlImagen = /(https?:\/\/[^\s"']+?\.(?:png|jpg|jpeg|gif|webp))/gi;
-            return texto.replace(regexUrlImagen, function(match) {
-                return `<img src="${match}" alt="Imagen no disponible" onerror="this.onerror=null;this.alt='Imagen no disponible';" />`;
+            .then(response => response.json())
+            .then(data => {
+                chatBox.innerHTML += `<p><strong>StudentID:</strong><br>${data.response}</p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                chatBox.innerHTML += `<p style='color: red;'>Error: ${error}</p>`;
             });
         }
-
-        function manejarSaltosDeLinea(texto) {
-            return texto.replace(/\n/g, '<br>');
-        }
-
-        function convertirMarkdownTitulos(texto) {
-            texto = texto.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            texto = texto.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            texto = texto.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-            return texto;
-        }
-
-        function convertirNegrita(texto) {
-            return texto.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        }
-
-        // Asegurarse de que MathJax renderice las ecuaciones cuando se cargue la página
-        window.onload = function() {
-            if (typeof MathJax !== 'undefined') {
-                MathJax.typeset();
-            } else {
-                console.error('MathJax no se ha cargado correctamente.');
-            }
-        };
     </script>
 </body>
 </html>
