@@ -27,6 +27,7 @@ system_prompt = {
         "- *Cursivas* para énfasis\n"
         "- ```bloques de código```\n"
         "- ![imagen](url) para recursos visuales\n"
+        'Utiliza el formato latex para ecuaciones'
         "Prioriza diálogos socráticos y estructura tus respuestas en secciones claras."
     )
 }
