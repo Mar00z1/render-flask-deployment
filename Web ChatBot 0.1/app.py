@@ -27,7 +27,6 @@ system_prompt = {
         "- *Cursivas* para énfasis\n"
         "- ```bloques de código```\n"
         "- ![imagen](url) para recursos visuales\n"
-        'Utiliza el formato latex para ecuaciones'
         "Prioriza diálogos socráticos y estructura tus respuestas en secciones claras."
     )
 }
@@ -55,25 +54,30 @@ def sanitizar_markdown(texto):
 
 # Manejo de comandos especiales
 def procesar_comando(comando, contenido):
-    if comando == '/clear':
-        conversation_history.clear()
-        conversation_history.append(system_prompt)
-        guardar_historial()
-        return "Historial limpiado. ¿En qué tema quieres comenzar?"
-    
-    elif comando == '/example':
-        return f"Por favor muestra 3 ejemplos prácticos sobre: {contenido}"
-    
-    elif comando == '/exercise':
-        return f"Genera un ejercicio de práctica sobre: {contenido}"
-    
-    elif comando == '/summary':
-        return "Genera un resumen estructurado con los puntos clave discutidos hasta ahora"
-    
-    elif comando == '/help':
-        return "Comandos disponibles:\n" + "\n".join(COMANDOS_VALIDOS)
-    
-    return None
+    """
+    Genera prompts contextualizados para los comandos especiales
+    que serán procesados por el modelo de OpenAI
+    """
+    prompts = {
+        '/example': (
+            f"Como profesor, muestra 3 ejemplos prácticos y originales sobre: {contenido}. "
+            "Incluye: 1) Contexto realista 2) Explicación detallada 3) Aplicación práctica. "
+            "Usa formato Markdown con ecuaciones cuando sea necesario."
+        ),
+        '/exercise': (
+            f"Crea un ejercicio práctico sobre: {contenido} con: "
+            "1) Enunciado claro 2) Datos relevantes 3) Guía paso a paso "
+            "4) Solución matemática usando LaTeX. Estructura en secciones con ##"
+        ),
+        '/summary': (
+            "Genera un resumen estructurado con: "
+            "1) Tema principal 2) 3-5 puntos clave (###) "
+            "3) Diagrama conceptual (en formato texto) 4) Ejercicio de autoevaluación. "
+            "Usa viñetas y ecuaciones cuando corresponda."
+        ),
+        '/help': "Lista detallada de comandos disponibles y su funcionamiento:"
+    }
+    return prompts.get(comando, None)
 
 # Ruta principal
 @app.route('/')
@@ -89,7 +93,7 @@ def chat():
     if not user_message:
         return jsonify({"response": "⚠️ Por favor escribe un mensaje válido"}), 400
 
-    # Manejar comandos
+    # Manejar comandos especiales
     if user_message.startswith('/'):
         comando = user_message.split()[0].lower()
         contenido = user_message[len(comando):].strip()
@@ -97,17 +101,24 @@ def chat():
         if comando not in COMANDOS_VALIDOS:
             return jsonify({"response": f"❌ Comando no reconocido: {comando}"}), 400
             
-        respuesta_comando = procesar_comando(comando, contenido)
-        if respuesta_comando:
-            return jsonify({"response": respuesta_comando})
-    
-    # Procesamiento normal del mensaje
-    conversation_history.append({"role": "user", "content": user_message})
+        # Obtener prompt contextualizado
+        prompt_comando = procesar_comando(comando, contenido)
+        if not prompt_comando:
+            return jsonify({"response": "⚠️ Error en el comando"}), 400
+        
+        # Agregar el comando como mensaje de usuario
+        conversation_history.append({"role": "user", "content": prompt_comando})
+    else:
+        # Mensaje normal
+        conversation_history.append({"role": "user", "content": user_message})
     
     try:
+        # Crear lista de mensajes según el modo memoria
+        mensajes = conversation_history if modo_memoria_activado else [system_prompt, conversation_history[-1]]
+        
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=conversation_history if modo_memoria_activado else [system_prompt, {"role": "user", "content": user_message}],
+            messages=mensajes,
             max_tokens=1500,
             temperature=0.7
         )
