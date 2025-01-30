@@ -1,244 +1,311 @@
+<!-- index.html (versión mejorada) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Educativo</title>
+    <title>EduBot Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 10px;
-            transition: background-color 0.3s, color 0.3s;
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --background: #f8f9fa;
+            --text: #2c3e50;
+            --card-bg: #ffffff;
+            --border: #e0e0e0;
         }
+
+        .dark-mode {
+            --primary: #ecf0f1;
+            --secondary: #2980b9;
+            --background: #2c3e50;
+            --text: #ecf0f1;
+            --card-bg: #34495e;
+            --border: #4a5f73;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system;
+            background: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 1rem;
+            transition: background 0.3s ease;
+        }
+
         .chat-container {
-            width: 100%;
-            max-width: 600px;
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .chat-header {
+            padding: 1.5rem;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #chat-box {
+            height: 60vh;
+            padding: 1.5rem;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 1rem;
         }
-        h1, #estado-memoria {
-            text-align: center;
+
+        .message {
+            max-width: 80%;
+            padding: 1rem;
+            border-radius: 1rem;
+            animation: fadeIn 0.3s ease;
         }
-        h1 {
-            font-family: 'Georgia', serif;
-            color: #333;
-            font-size: 1.8em;
-            margin-bottom: 20px;
+
+        .user-message {
+            background: var(--secondary);
+            color: white;
+            align-self: flex-end;
         }
-        #chat-box {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #fafafa;
-            text-align: left;
-            white-space: pre-wrap; /* To preserve line breaks */
+
+        .bot-message {
+            background: var(--background);
+            border: 1px solid var(--border);
+            align-self: flex-start;
         }
+
+        .input-container {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
         input[type="text"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-size: 1em;
+            flex: 1;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: var(--background);
+            color: var(--text);
         }
+
         button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007BFF;
+            padding: 0.8rem 1.5rem;
             border: none;
+            border-radius: 0.5rem;
+            background: var(--secondary);
             color: white;
-            border-radius: 5px;
             cursor: pointer;
-            margin-top: 10px;
-            font-size: 1em;
+            transition: transform 0.2s ease;
         }
+
         button:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
         }
-        .dark-mode {
-            background-color: #1e1e1e;
-            color: #ffffff;
+
+        .typing-indicator {
+            display: none;
+            padding: 1rem;
+            color: var(--text);
+            font-style: italic;
         }
-        .dark-mode .chat-container {
-            background-color: #333;
-            color: #fff;
+
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            padding: 1rem;
+            flex-wrap: wrap;
         }
-        .dark-mode #chat-box {
-            background-color: #444;
-            border-color: #555;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .dark-mode input[type="text"] {
-            background-color: #555;
-            color: #fff;
-            border-color: #777;
-        }
-        .dark-mode button {
-            background-color: #008CBA;
-        }
-        .dark-mode button:hover {
-            background-color: #005f75;
-        }
+
         .dark-mode-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
+            background: none;
+            border: 2px solid var(--secondary);
+            padding: 0.5rem;
             border-radius: 50%;
-            background-color: #007BFF;
-            border: none;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-        .dark-mode-toggle:hover {
-            background-color: #0056b3;
-        }
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 5px;
         }
 
-        /* Media queries para pantallas más pequeñas */
+        .card {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border: 1px solid var(--border);
+        }
+
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
             .chat-container {
-                width: 100%;
-                padding: 15px;
+                border-radius: 0;
             }
-            h1 {
-                font-size: 1.5em;
-            }
-            button, input[type="text"] {
-                font-size: 1em;
-                padding: 8px;
-            }
+            
             #chat-box {
-                height: 250px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.3em;
-            }
-            .dark-mode-toggle {
-                width: 35px;
-                height: 35px;
-                font-size: 14px;
+                height: 70vh;
             }
         }
     </style>
-    <script type="text/javascript" async
-      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js">
+    <!-- MathJax Configuration -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
-    <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌓</button>
     <div class="chat-container">
-        <h1>Chatbot Educativo</h1>
+        <div class="chat-header">
+            <h1>🧠 EduBot Inteligente</h1>
+            <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
         <div id="chat-box"></div>
-        <input type="text" id="user-input" placeholder="Escribe tu pregunta aquí...">
-        <button onclick="sendMessage()">Enviar</button>
+        
+        <div class="typing-indicator" id="typing">
+            <i class="fas fa-ellipsis-h"></i> Pensando...
+        </div>
 
-        <button onclick="toggleMemoria()">Activar/Desactivar Modo Memoria</button>
-        <p id="estado-memoria" class="status">Modo Memoria Desactivado</p>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Escribe tu pregunta o comando..." 
+                   autocomplete="off" onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Enviar</button>
+        </div>
 
-        <button onclick="generarStudentID()">Generar StudentID</button>
+        <div class="toolbar">
+            <button onclick="toggleMemoria()" id="memory-btn">
+                <i class="fas fa-brain"></i> Memoria: OFF
+            </button>
+            <button onclick="showHelp()">
+                <i class="fas fa-question-circle"></i> Ayuda
+            </button>
+            <button onclick="exportChat()">
+                <i class="fas fa-download"></i> Exportar
+            </button>
+        </div>
     </div>
 
     <script>
-        let modoMemoria = false;
-
-        function toggleMemoria() {
-            fetch('/toggle_memoria', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                modoMemoria = !modoMemoria;
-                document.getElementById('estado-memoria').innerText = `Modo Memoria ${modoMemoria ? 'Activado' : 'Desactivado'}`;
-            })
-            .catch(error => {
-                alert('Error al cambiar el estado del modo memoria: ' + error);
-            });
-        }
+        let isDarkMode = false;
+        let memoriaActiva = false;
 
         function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
             document.body.classList.toggle('dark-mode');
+            document.querySelector('.dark-mode-toggle i').className = 
+                isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
         }
 
-        function processMarkdown(text) {
-            // Simple markdown processing for basic formatting like **bold**, *italic*, ### header, and line breaks.
-            let processedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold text
-                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')  // Italic text
-                                    .replace(/### (.*?)\n/g, '<h3>$1</h3>') // Header level 3
-                                    .replace(/\n/g, '<br>');  // Line breaks
-            return processedText;
+        function handleKeyPress(e) {
+            if(e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         }
 
-        function sendMessage() {
-            let userInput = document.getElementById('user-input').value;
-            if (userInput.trim() === '') return;
+        function createMessageElement(content, isUser) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            div.innerHTML = processContent(content);
+            return div;
+        }
 
-            let chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML += `<p><strong>Tú:</strong> ${processMarkdown(userInput)}</p>`;
-            document.getElementById('user-input').value = '';
+        function processContent(text) {
+            return text
+                .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="card">')
+                .replace(/### (.*)/g, '<h3>$1</h3>')
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+        }
 
-            fetch('/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: userInput})
-            })
-            .then(response => response.json())
-            .then(data => {
-                chatBox.innerHTML += `<p>${processMarkdown(data.response)}</p>`;
+        function showTyping() {
+            document.getElementById('typing').style.display = 'block';
+        }
+
+        function hideTyping() {
+            document.getElementById('typing').style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if(!message) return;
+
+            const chatBox = document.getElementById('chat-box');
+            chatBox.appendChild(createMessageElement(message, true));
+            input.value = '';
+            
+            showTyping();
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message})
+                });
+                
+                const data = await response.json();
+                chatBox.appendChild(createMessageElement(data.response, false));
                 MathJax.typeset();
-                chatBox.scrollTop = chatBox.scrollHeight;
-            })
-            .catch(error => {
-                chatBox.innerHTML += `<p style='color: red;'>Error: ${error}</p>`;
-            });
+            } catch(error) {
+                chatBox.appendChild(createMessageElement(`Error: ${error.message}`, false));
+            }
+            
+            hideTyping();
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function generarStudentID() {
-            let chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML += `<p><strong>Solicitando StudentID...</strong></p>`;
+        function toggleMemoria() {
+            memoriaActiva = !memoriaActiva;
+            document.getElementById('memory-btn').innerHTML = 
+                `<i class="fas fa-brain"></i> Memoria: ${memoriaActiva ? 'ON' : 'OFF'}`;
+            
+            fetch('/toggle_memoria', { method: 'POST' })
+                .catch(error => alert('Error actualizando memoria'));
+        }
 
-            fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: "Genera un resumen sobre mis hábitos de estudio, intereses académicos, fortalezas y debilidades basándote en nuestra conversación."
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                chatBox.innerHTML += `<p><strong>StudentID:</strong><br>${processMarkdown(data.response)}</p>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            })
-            .catch(error => {
-                chatBox.innerHTML += `<p style='color: red;'>Error: ${error}</p>`;
-            });
+        function exportChat() {
+            const chatContent = Array.from(document.querySelectorAll('.message'))
+                .map(msg => `${msg.classList.contains('user-message') ? 'Tú' : 'Bot'}: ${msg.textContent}`)
+                .join('\n');
+            
+            const blob = new Blob([chatContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat-${new Date().toISOString()}.txt`;
+            a.click();
+        }
+
+        function showHelp() {
+            const helpContent = `
+                ## Comandos disponibles:
+                - **/clear** - Limpiar el chat
+                - **/example [tema]** - Solicitar ejemplos
+                - **/exercise** - Generar ejercicio
+                - **/summary** - Resumen del tema
+            `;
+            
+            const chatBox = document.getElementById('chat-box');
+            chatBox.appendChild(createMessageElement(helpContent, false));
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
 </body>
