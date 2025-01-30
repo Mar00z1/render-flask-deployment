@@ -1,103 +1,164 @@
 import openai
 import json
-from flask import Flask, render_template, request, jsonify
-import os 
+import re
+from flask import Flask, render_template, request, jsonify, make_response
+import os
+from datetime import datetime
+
 # Configuración de la clave API
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 # Inicialización de Flask
 app = Flask(__name__)
 
-# Variable global para el historial de la conversación y el estado del modo memoria
-conversation_history = [{"role": "system",
-        "content":('Imagina que sos un excelente profesor, un explicador profesional. Das muchos ejemplos, explicas de una manera intuitiva cuando es necesario, pero de una manera lógica/matemática cuando se te pide, explicas con calma y paciencia. Cada vez que terminas de explicar un concepto, haces una muy buena pregunta para asegurar que el mismo se entendió, no sigues explicando hasta que esta pregunta te sea respondida. Además, luego de terminar toda tu explicación, das una guía de ejercicios para terminar de cerrar el tema. Es importante que hagas preguntas conceptuales interesantes luego de explicar cada tema. Espera mi respuesta a tu pregunta, no sigas explicando temas hasta que no tengas mi respuesta. Reacciona a mi respuesta de manera natural, dime claramente si he respondido mal una pregunta y refuerza tu explicación. Quiero que uses diagramas para tus explicaciones, no quiero que los generes, extráelos de internet. Además, si te proveo de una lista entera de temas, quiero que a partir de tu criterio resuelvas cuáles necesitarán una explicación más conceptual, y cuáles una explicación más matemática. Adicionalmente, si en estos temas aparecen ecuaciones vectoriales o cálculo vectorial en general, dejaré a tu criterio si es mejor explicar cierto tema de forma vectorial o escalar. Importante: si se te pide mostrar una imagen, quiero que sea extraida de internet, ademas, solo quiero que busques una sola imagen de lo solicitado, eso es muy importante. Estás listo?')}]
-modo_memoria_activado = False  # Inicialmente, el modo memoria está desactivado
+# Sistema de almacenamiento
+conversation_history = []
+modo_memoria_activado = False
+COMANDOS_VALIDOS = ['/clear', '/example', '/exercise', '/summary', '/help']
 
-# Función para cargar el historial desde un archivo JSON
+# Prompt del sistema mejorado
+system_prompt = {
+    "role": "system",
+    "content": (
+        "Eres un profesor experto que adapta explicaciones usando ejemplos prácticos y preguntas interactivas. "
+        "Usa formato Markdown para:\n"
+        "- Encabezados (###)\n"
+        "- **Negritas** para términos clave\n"
+        "- *Cursivas* para énfasis\n"
+        "- ```bloques de código```\n"
+        "- ![imagen](url) para recursos visuales\n"
+        "Prioriza diálogos socráticos y estructura tus respuestas en secciones claras."
+    )
+}
+
+# Cargar historial al iniciar
 def cargar_historial():
     global conversation_history
     try:
         with open("modo_memoria.json", "r") as f:
             conversation_history = json.load(f)
     except FileNotFoundError:
-        conversation_history = [{"role": "system",
-        "content":('Imagina que sos un excelente profesor, un explicador profesional. Das muchos ejemplos, explicas de una manera intuitiva cuando es necesario, pero de una manera lógica/matemática cuando se te pide, explicas con calma y paciencia. Cada vez que terminas de explicar un concepto, haces una muy buena pregunta para asegurar que el mismo se entendió, no sigues explicando hasta que esta pregunta te sea respondida. Además, luego de terminar toda tu explicación, das una guía de ejercicios para terminar de cerrar el tema. Es importante que hagas preguntas conceptuales interesantes luego de explicar cada tema. Espera mi respuesta a tu pregunta, no sigas explicando temas hasta que no tengas mi respuesta. Reacciona a mi respuesta de manera natural, dime claramente si he respondido mal una pregunta y refuerza tu explicación. Quiero que uses diagramas para tus explicaciones, no quiero que los generes, extráelos de internet. Además, si te proveo de una lista entera de temas, quiero que a partir de tu criterio resuelvas cuáles necesitarán una explicación más conceptual, y cuáles una explicación más matemática. Adicionalmente, si en estos temas aparecen ecuaciones vectoriales o cálculo vectorial en general, dejaré a tu criterio si es mejor explicar cierto tema de forma vectorial o escalar. Importante: si se te pide mostrar una imagen, quiero que sea extraida de internet, ademas, solo quiero que busques una sola imagen de lo solicitado, eso es muy importante. Estás listo?')}]
+        conversation_history = [system_prompt]
 
-# Función para guardar el historial en un archivo JSON
+# Guardar historial
 def guardar_historial():
     with open("modo_memoria.json", "w") as f:
         json.dump(conversation_history, f)
 
-# Ruta para la página principal
+# Procesamiento seguro de Markdown
+def sanitizar_markdown(texto):
+    # Remover elementos potencialmente peligrosos
+    texto = re.sub(r'<script>.*?</script>', '', texto, flags=re.DOTALL)
+    texto = re.sub(r'javascript:', '', texto, flags=re.IGNORECASE)
+    return texto
+
+# Manejo de comandos especiales
+def procesar_comando(comando, contenido):
+    if comando == '/clear':
+        conversation_history.clear()
+        conversation_history.append(system_prompt)
+        guardar_historial()
+        return "Historial limpiado. ¿En qué tema quieres comenzar?"
+    
+    elif comando == '/example':
+        return f"Por favor muestra 3 ejemplos prácticos sobre: {contenido}"
+    
+    elif comando == '/exercise':
+        return f"Genera un ejercicio de práctica sobre: {contenido}"
+    
+    elif comando == '/summary':
+        return "Genera un resumen estructurado con los puntos clave discutidos hasta ahora"
+    
+    elif comando == '/help':
+        return "Comandos disponibles:\n" + "\n".join(COMANDOS_VALIDOS)
+    
+    return None
+
+# Ruta principal
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Ruta para recibir y responder mensajes del chatbot
+# Ruta para el chat
 @app.route('/chat', methods=['POST'])
 def chat():
     global conversation_history, modo_memoria_activado
 
-    user_message = request.json.get('message')
+    user_message = request.json.get('message', '').strip()
     if not user_message:
-        return jsonify({"response": "Error: No se recibió ningún mensaje."}), 400
+        return jsonify({"response": "⚠️ Por favor escribe un mensaje válido"}), 400
 
-    # Agregar el mensaje del usuario al historial
+    # Manejar comandos
+    if user_message.startswith('/'):
+        comando = user_message.split()[0].lower()
+        contenido = user_message[len(comando):].strip()
+        
+        if comando not in COMANDOS_VALIDOS:
+            return jsonify({"response": f"❌ Comando no reconocido: {comando}"}), 400
+            
+        respuesta_comando = procesar_comando(comando, contenido)
+        if respuesta_comando:
+            return jsonify({"response": respuesta_comando})
+    
+    # Procesamiento normal del mensaje
     conversation_history.append({"role": "user", "content": user_message})
-
-    # Si el modo memoria está activado, utilizamos el historial de conversaciones
-    if modo_memoria_activado:
-        chat_input = conversation_history
-    else:
-        chat_input = [{"role": "user", "content": user_message}]  # Solo el último mensaje del usuario
-
+    
     try:
         response = openai.chat.completions.create(
-            model="gpt-4o-mini",  # Usa el modelo GPT adecuado
-            messages=chat_input,
-            max_tokens=3000,
+            model="gpt-4o-mini",
+            messages=conversation_history if modo_memoria_activado else [system_prompt, {"role": "user", "content": user_message}],
+            max_tokens=1500,
             temperature=0.7
         )
 
-        # Respuesta del chatbot
-        bot_response = response.choices[0].message.content
-
-        # Agregar la respuesta del chatbot al historial
+        bot_response = sanitizar_markdown(response.choices[0].message.content)
         conversation_history.append({"role": "assistant", "content": bot_response})
-
-        # Guardar el historial en el archivo JSON
         guardar_historial()
 
         return jsonify({"response": bot_response})
+    
     except Exception as e:
-        return jsonify({"response": f"Ha ocurrido un error: {e}"}), 500
+        app.logger.error(f"Error en OpenAI: {str(e)}")
+        return jsonify({"response": "⚠️ Error al procesar tu solicitud. Intenta nuevamente."}), 500
 
-# Ruta para activar/desactivar el modo memoria
+# Ruta para exportar el chat
+@app.route('/export', methods=['GET'])
+def export_chat():
+    chat_content = "\n".join(
+        f"{msg['role'].capitalize()}: {msg['content']}" 
+        for msg in conversation_history 
+        if msg['role'] != 'system'
+    )
+    
+    response = make_response(chat_content)
+    response.headers["Content-Disposition"] = f"attachment; filename=chat_export_{datetime.now().strftime('%Y%m%d%H%M')}.txt"
+    response.headers["Content-type"] = "text/plain"
+    return response
+
+# Ruta para el modo memoria
 @app.route('/toggle_memoria', methods=['POST'])
 def toggle_memoria():
     global modo_memoria_activado
-    modo_memoria_activado = not modo_memoria_activado  # Cambiar el estado del modo memoria
+    modo_memoria_activado = not modo_memoria_activado
+    return jsonify({
+        "status": "success",
+        "message": f"Modo memoria {'activado' if modo_memoria_activado else 'desactivado'}"
+    })
 
-    # Responder con el estado actual del modo memoria
-    estado = "activado" if modo_memoria_activado else "desactivado"
-    return jsonify({"response": f"Modo memoria {estado}."})
-
-# Ruta para devolver lo aprendido por el chatbot (resumen)
-@app.route('/resumen', methods=['POST'])
+# Ruta para obtener resumen
+@app.route('/resumen', methods=['GET'])
 def resumen():
-    global conversation_history
-
-    # Crear un resumen del historial de conversación
-    resumen_texto = "Lo que he aprendido sobre ti es lo siguiente:\n"
-    for message in conversation_history:
-        if message['role'] == 'user':
-            resumen_texto += f"- {message['content']}\n"
-
-    if not resumen_texto.strip() == "Lo que he aprendido sobre ti es lo siguiente:":
-        return jsonify({"response": resumen_texto})
-    else:
-        return jsonify({"response": "No he aprendido mucho aún, ¡pero seguiré aprendiendo sobre ti!"})
+    puntos_clave = [
+        msg['content'] for msg in conversation_history 
+        if msg['role'] == 'assistant' and '### Punto clave' in msg['content']
+    ]
+    
+    if not puntos_clave:
+        return jsonify({"response": "ℹ️ Aún no hay suficiente información para generar un resumen."})
+    
+    resumen = "## Resumen de aprendizaje\n" + "\n\n".join(puntos_clave)
+    return jsonify({"response": resumen})
 
 if __name__ == '__main__':
-    cargar_historial()  # Cargar el historial desde el archivo al iniciar
+    cargar_historial()
     app.run(debug=False)
