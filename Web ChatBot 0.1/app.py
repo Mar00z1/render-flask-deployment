@@ -14,7 +14,7 @@ app = Flask(__name__)
 # Sistema de almacenamiento
 conversation_history = []
 modo_memoria_activado = False
-COMANDOS_VALIDOS = ['/clear', '/example', '/exercise', '/summary', '/help']
+COMANDOS_VALIDOS = ['/clear', '/example', '/exercise', '/summary', '/help','/explicar']
 
 # Prompt del sistema mejorado
 system_prompt = {
@@ -28,6 +28,8 @@ system_prompt = {
         "- ```bloques de código```\n"
         "- ![imagen](url) para recursos visuales\n"
         "Prioriza diálogos socráticos y estructura tus respuestas en secciones claras."
+        'Utiliza el historial de conversaciones si esta disponible para poder adaptar la explicacion al alumno segun sus caracteristicas de aprendizaje.'
+        'Cualquier ecuacion que escribas la quiero en formato LaTex'
     )
 }
 
@@ -59,6 +61,16 @@ def procesar_comando(comando, contenido):
     que serán procesados por el modelo de OpenAI
     """
     prompts = {
+        '/explicar': (
+            f"Como profesor experto, explica el tema: {contenido} usando:\n"
+            "Todo el historial disponible de las conversaciones con el alumno"
+            'Determina su nivel actual y su estilo de estudio para darle una clase que mas se adapte a el'
+            'Por ejemplo, si es bueno con matematicas, dale muchas ecuaciones, y asi con todo'
+            "Usa formato Markdown con secciones claras (##) y resalta fórmulas importantes."
+            'Utiliza todo el historial de conversacion si esta disponible para adaptar la explicacion al alumno.'
+            'Me gustaria que te expandas lo mas posible en cada tema para que se entienda bien'
+            
+            ),
         '/example': (
             f"Como profesor, muestra 3 ejemplos prácticos y originales sobre: {contenido}. "
             "Incluye: 1) Contexto realista 2) Explicación detallada 3) Aplicación práctica. "
@@ -119,8 +131,8 @@ def chat():
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=mensajes,
-            max_tokens=1500,
-            temperature=0.7
+            max_tokens=5000,
+            temperature=0.3
         )
 
         bot_response = sanitizar_markdown(response.choices[0].message.content)
