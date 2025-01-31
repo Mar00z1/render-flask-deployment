@@ -212,6 +212,81 @@
                 font-size: 0.9rem;
             }
         }
+
+            .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 300px;
+        background: var(--card-bg);
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+        padding: 1rem;
+        }
+
+        .course {
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 0.5rem;
+            margin: 0.5rem 0;
+            background: var(--background);
+        }
+
+        .topic {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            margin: 0.2rem 0;
+            background: rgba(0,0,0,0.05);
+        }
+
+        .topic:hover {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .topics-container {
+            display: none;
+            margin-left: 1rem;
+            border-left: 2px solid var(--secondary);
+            padding-left: 0.5rem;
+        }
+
+        .menu-header {
+            font-weight: bold;
+            margin: 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .topic {
+    transition: all 0.2s ease;
+    padding: 0.8rem 1.2rem;
+    margin: 0.3rem 0;
+    border-radius: 0.5rem;
+    background: rgba(0,0,0,0.05);
+    color: var(--text);
+    }
+
+        .topic:hover {
+            background: var(--secondary);
+            transform: translateX(5px);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .course {
+            transition: all 0.2s ease;
+            padding: 0.8rem;
+            margin: 0.3rem 0;
+        }
+
+        .course:hover {
+            background: rgba(0,0,0,0.05);
+        }
     </style>
     <script>
         MathJax = {
@@ -229,7 +304,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
-    <div class="chat-container">
+    <div class="chat-container" style="margin-left: 450px;">
         <div class="chat-header">
             <h1 style="margin: 0; font-size: 1.5rem;">
                 <i class="fas fa-robot"></i> EduBot Inteligente
@@ -237,6 +312,31 @@
             <button class="dark-mode-toggle" onclick="toggleDarkMode()">
                 <i class="fas fa-moon"></i>
             </button>
+        </div>
+
+        <div class="sidebar">
+            <div class="courses-menu">
+                <div class="menu-header">Cursos Universitarios</div>
+                <div class="course" onclick="toggleCourse('fisica')">
+                    <span>📚 Física</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="fisica-topics" class="topics-container">
+                    <div class="topic" onclick="sendTopicPrompt('Leyes de Newton')">Leyes de Newton</div>
+                    <div class="topic" onclick="sendTopicPrompt('Termodinámica')">Termodinámica</div>
+                    <div class="topic" onclick="sendTopicPrompt('Electromagnetismo')">Electromagnetismo</div>
+                </div>
+                
+                <div class="course" onclick="toggleCourse('programacion')">
+                    <span>💻 Programación</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="programacion-topics" class="topics-container">
+                    <div class="topic" onclick="sendTopicPrompt('POO en Python')">POO en Python</div>
+                    <div class="topic" onclick="sendTopicPrompt('Estructuras de datos')">Estructuras de datos</div>
+                    <div class="topic" onclick="sendTopicPrompt('Algoritmos de búsqueda')">Algoritmos de búsqueda</div>
+                </div>
+            </div>
         </div>
 
         <div id="chat-box"></div>
@@ -284,7 +384,9 @@
                 .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="card">')
                 .replace(/\$\$(.*?)\$\$/gs, '\\[$1\\]')
                 .replace(/\$(.*?)\$/g, '\\($1\\)')
-                .replace(/\n/g, '<br>');
+                .replace(/\n/g, '<br>')
+                .replace(/^\d+\.\s+(.*$)/gm, '<ol><li>$1</li></ol>')
+                .replace(/<\/ol>\n<ol>/g, '');
         }
 
         function createMessageElement(content, isUser) {
@@ -387,6 +489,42 @@
             const chatBox = document.getElementById('chat-box');
             chatBox.appendChild(createMessageElement(helpContent, false));
             chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function toggleCourse(courseId) {
+    const topics = document.getElementById(`${courseId}-topics`);
+    topics.style.display = topics.style.display === 'none' ? 'block' : 'none';
+}
+
+        function sendTopicPrompt(topic) {
+            const prompt = `/explicar Por favor explica el tema "${topic}" de manera detallada:
+            Te dare libertad para explicar los temas de acuerdo a como sea el perfil de cada alumno,
+            personaliza la explicacion, en que profundidad explicas los temas dados, que recursos usas, etc.
+            Me gustaria que hagas preguntas conceptuales desafiantes, que des ejercicios interesantes para resolver.
+            Un punto importante es que me gustaria que cada vez que haces un pregunta conceptual, esperes a la respuesta para
+            continuar tu explicacion. Permite que la conversacion se ramifique a partir de la respuesta, y usa estas para aprender del
+            alumno.`;
+
+            showLoading(true);
+            
+            fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: prompt})
+            })
+            .then(response => response.json())
+            .then(data => {
+                const chatBox = document.getElementById('chat-box');
+                const newMessage = createMessageElement(data.response, false);
+                chatBox.appendChild(newMessage);
+                MathJax.typesetPromise([newMessage]);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatBox.appendChild(createMessageElement("⚠️ Error al cargar el tema", false));
+            })
+            .finally(() => showLoading(false));
         }
     </script>
 </body>
