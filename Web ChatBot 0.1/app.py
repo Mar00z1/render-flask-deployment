@@ -30,6 +30,7 @@ system_prompt = {
         "Prioriza diálogos socráticos y estructura tus respuestas en secciones claras."
         'Utiliza el historial de conversaciones si esta disponible para poder adaptar la explicacion al alumno segun sus caracteristicas de aprendizaje.'
         'Cualquier ecuacion que escribas la quiero en formato LaTex'
+        'Cuando hagas una pregunta, interrumpe la explicacion hasta tener una respuesta'
     )
 }
 
