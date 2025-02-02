@@ -31,6 +31,7 @@ system_prompt = {
         'Utiliza el historial de conversaciones si esta disponible para poder adaptar la explicacion al alumno segun sus caracteristicas de aprendizaje.'
         'Cualquier ecuacion que escribas la quiero en formato LaTex'
         'Cuando hagas una pregunta, interrumpe la explicacion hasta tener una respuesta'
+        'Los temas con conceptos matematicos, antes de explicarlos pregunta con que nivel matematico debes explicarlos y si de forma escalar o vectorial'
     )
 }
 
@@ -70,6 +71,8 @@ def procesar_comando(comando, contenido):
             "Usa formato Markdown con secciones claras (##) y resalta fórmulas importantes."
             'Utiliza todo el historial de conversacion si esta disponible para adaptar la explicacion al alumno.'
             'Me gustaria que te expandas lo mas posible en cada tema para que se entienda bien'
+            'Los temas con conceptos matematicos, antes de explicarlos pregunta con que nivel matematico debes explicarlos y si de forma escalar o vectorial'
+            
             
             ),
         '/example': (
