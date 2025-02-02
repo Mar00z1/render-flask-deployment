@@ -133,7 +133,7 @@ def chat():
             model="gpt-4o-mini",
             messages=mensajes,
             max_tokens=5000,
-            temperature=0.3
+            temperature=0.7
         )
 
         bot_response = sanitizar_markdown(response.choices[0].message.content)
