@@ -46,10 +46,29 @@
       border-right: 1px solid var(--border);
       overflow-y: auto;
       padding: 1rem;
-      transition: width 0.3s ease, padding 0.3s ease;
+      transition: all 0.3s ease;
       z-index: 1000;
     }
 
+    /* Por defecto en escritorio/tablet el sidebar se muestra, 
+       pero en móviles se oculta y se muestra como overlay */
+    @media (max-width: 600px) {
+      .sidebar {
+        width: 250px;
+        transform: translateX(-260px);
+        position: fixed;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      }
+      .sidebar.active {
+        transform: translateX(0);
+      }
+      /* Ajustamos el botón toggle para mayor visibilidad en móvil */
+      #sidebarToggle {
+        left: 1rem;
+      }
+    }
+
+    /* Sidebar colapsado para escritorio (si se decide colapsar) */
     .sidebar.collapsed {
       width: 0;
       padding: 0;
@@ -234,23 +253,6 @@
       50% { opacity: 0.5; }
     }
 
-    @media (max-width: 768px) {
-      .chat-container {
-        border-radius: 0;
-        max-width: 100%;
-      }
-
-      #chat-box {
-        height: 65vh;
-        padding: 1rem;
-      }
-
-      button {
-        padding: 0.8rem 1.2rem;
-        font-size: 0.9rem;
-      }
-    }
-
     /* Estilos para el menú de cursos y temas */
     .courses-menu {
       margin-top: 3rem; /* Espacio para el toggle (opcional) */
@@ -300,6 +302,39 @@
       transform: translateX(5px);
       box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
       color: white;
+    }
+
+    /* Ajustes para tablet */
+    @media (min-width: 600px) and (max-width: 1024px) {
+      .chat-container {
+        margin: 1rem auto;
+      }
+    }
+
+    /* Ajustes para móviles */
+    @media (max-width: 600px) {
+      /* Chat container ocupa casi el 100% del ancho */
+      .chat-container {
+        width: 100%;
+        border-radius: 0;
+        margin-top: 4rem; /* Deja espacio para el toggle y posible header del sidebar */
+      }
+      /* Ajuste en la altura del chat-box para pantallas pequeñas */
+      #chat-box {
+        height: 50vh;
+        padding: 1rem;
+      }
+      /* Reducir padding en input y botones */
+      .input-container {
+        padding: 1rem;
+      }
+      input[type="text"] {
+        padding: 0.8rem;
+      }
+      button {
+        padding: 0.8rem 1.2rem;
+        font-size: 0.9rem;
+      }
     }
   </style>
   <script>
@@ -396,6 +431,8 @@
     function processContent(text) {
       // Procesamiento mejorado de Markdown
       return text
+        .replace(/^##### (.*$)/gm, '<h5>$1</h5>')
+        .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
         .replace(/^### (.*$)/gm, '<h3>$1</h3>')
         .replace(/^## (.*$)/gm, '<h2>$1</h2>')
         .replace(/^# (.*$)/gm, '<h1>$1</h1>')
@@ -414,24 +451,33 @@
     function updateChatPosition() {
       const sidebar = document.getElementById('sidebar');
       const chatContainer = document.getElementById('chatContainer');
-      if (sidebar.classList.contains('collapsed')) {
-        // Sidebar colapsado: el chat se centra
-        chatContainer.style.marginLeft = "auto";
-        chatContainer.style.marginRight = "auto";
+      
+      // Para escritorio y tablet: ajusta el margen según el sidebar
+      if (window.innerWidth > 600) {
+        if (sidebar.classList.contains('collapsed')) {
+          chatContainer.style.marginLeft = "auto";
+          chatContainer.style.marginRight = "auto";
+        } else {
+          chatContainer.style.marginLeft = "calc(50% - 300px)";
+          chatContainer.style.marginRight = "";
+        }
       } else {
-        // Sidebar desplegado: desplazamos el chatbox levemente a la derecha respecto del centro.
-        // Para un contenedor de 800px, el centro exacto sería "calc(50% - 400px)".
-        // Usamos "calc(50% - 300px)" para moverlo aproximadamente 100px a la derecha.
-        chatContainer.style.marginLeft = "calc(50% - 300px)";
-        chatContainer.style.marginRight = "";
+        // En móvil, el chat ocupa el ancho completo
+        chatContainer.style.margin = "0 auto";
       }
     }
 
-    // Alterna el estado del sidebar (sin modificar el ícono, que siempre muestra hamburguesa)
+    // Alterna el estado del sidebar
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('collapsed');
-      updateChatPosition();
+      if(window.innerWidth <= 600) {
+        // En móvil, usamos la clase "active" para mostrar/ocultar el sidebar (overlay)
+        sidebar.classList.toggle('active');
+      } else {
+        // En escritorio/tablet se colapsa el sidebar si se desea
+        sidebar.classList.toggle('collapsed');
+        updateChatPosition();
+      }
     }
 
     function createMessageElement(content, isUser) {
@@ -538,7 +584,7 @@
 
     function toggleCourse(courseId) {
       const topics = document.getElementById(`${courseId}-topics`);
-      topics.style.display = topics.style.display === 'none' ? 'block' : 'none';
+      topics.style.display = topics.style.display === 'none' || topics.style.display === '' ? 'block' : 'none';
     }
 
     function sendTopicPrompt(topic) {
@@ -574,9 +620,11 @@ Permite que la conversación se ramifique a partir de la respuesta y usa estas p
 
     // Al iniciar, se actualiza la posición del chat container
     document.addEventListener("DOMContentLoaded", updateChatPosition);
+    window.addEventListener("resize", updateChatPosition);
   </script>
 </body>
 </html>
+
 
 
 
