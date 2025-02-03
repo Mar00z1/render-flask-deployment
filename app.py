@@ -11,7 +11,8 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 # Inicialización de Flask y SQLAlchemy
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///conversations.db'
+database_url = os.environ.get("DATABASE_URL", "sqlite:///conversations.db")  # Valor por defecto si no está configurada la variable de entorno
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate=Migrate(app,db)
