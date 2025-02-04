@@ -23,7 +23,6 @@ class Message(db.Model):
     role = db.Column(db.String(50), nullable=False)
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, nullable=True)
 
 # Sistema de almacenamiento
 conversation_history = []
