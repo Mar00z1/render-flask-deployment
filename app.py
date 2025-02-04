@@ -30,7 +30,7 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 # Inicialización de Flask y configuración
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "este-es-un-secreto")
-database_url = os.environ.get("DATABASE_URL", "sqlite:///conversations.db")
+database_url = os.environ.get("DATABASE_URL", "sqlite:///conversations.db").replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
