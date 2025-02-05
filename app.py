@@ -205,10 +205,11 @@ def logout():
 # Rutas del Chat                             #
 ##############################################
 
+# Modificamos la ruta principal para inyectar el estado real de memory_mode en la plantilla.
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', memoria_activa=current_user.memory_mode)
 
 @app.route('/chat', methods=['POST'])
 @login_required
@@ -311,6 +312,7 @@ def export_chat():
         app.logger.error(f"Error en exportación: {str(e)}")
         return jsonify({"response": "⚠️ Error al exportar el chat"}), 500
 
+# Endpoint modificado para alternar el modo memoria.
 @app.route('/toggle_memoria', methods=['POST'])
 @login_required
 def toggle_memoria():
@@ -319,6 +321,7 @@ def toggle_memoria():
         db.session.commit()
         return jsonify({
             "status": "success",
+            "memory_mode": current_user.memory_mode,
             "message": f"Modo memoria {'activado' if current_user.memory_mode else 'desactivado'}"
         })
     except Exception as e:

@@ -50,8 +50,7 @@
       z-index: 1000;
     }
 
-    /* Por defecto en escritorio/tablet el sidebar se muestra, 
-       pero en móviles se oculta y se muestra como overlay */
+    /* En móviles, el sidebar se oculta y se muestra como overlay */
     @media (max-width: 600px) {
       .sidebar {
         width: 250px;
@@ -62,20 +61,20 @@
       .sidebar.active {
         transform: translateX(0);
       }
-      /* Ajustamos el botón toggle para mayor visibilidad en móvil */
+      /* Ajuste para el botón toggle en móvil */
       #sidebarToggle {
         left: 1rem;
       }
     }
 
-    /* Sidebar colapsado para escritorio (si se decide colapsar) */
+    /* Sidebar colapsado para escritorio */
     .sidebar.collapsed {
       width: 0;
       padding: 0;
       overflow: hidden;
     }
 
-    /* Botón Toggle (siempre visible) */
+    /* Botón Toggle */
     #sidebarToggle {
       position: fixed;
       top: 1rem;
@@ -206,7 +205,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Estilos mejorados para elementos Markdown */
+    /* Estilos para elementos Markdown */
     .bot-message h1,
     .bot-message h2,
     .bot-message h3 {
@@ -253,9 +252,9 @@
       50% { opacity: 0.5; }
     }
 
-    /* Estilos para el menú de cursos y temas */
+    /* Menú de cursos y temas */
     .courses-menu {
-      margin-top: 3rem; /* Espacio para el toggle (opcional) */
+      margin-top: 3rem;
     }
 
     .course {
@@ -313,18 +312,15 @@
 
     /* Ajustes para móviles */
     @media (max-width: 600px) {
-      /* Chat container ocupa casi el 100% del ancho */
       .chat-container {
         width: 100%;
         border-radius: 0;
-        margin-top: 4rem; /* Deja espacio para el toggle y posible header del sidebar */
+        margin-top: 4rem;
       }
-      /* Ajuste en la altura del chat-box para pantallas pequeñas */
       #chat-box {
         height: 50vh;
         padding: 1rem;
       }
-      /* Reducir padding en input y botones */
       .input-container {
         padding: 1rem;
       }
@@ -402,6 +398,7 @@
     </div>
 
     <div class="toolbar">
+      <!-- El botón Memoria se actualizará según el valor inyectado desde el backend -->
       <button onclick="toggleMemoria()" id="memory-btn">
         <i class="fas fa-brain"></i> Memoria
       </button>
@@ -426,8 +423,16 @@
 
   <script>
     let isDarkMode = false;
-    let memoriaActiva = false;
+    // La variable 'memoriaActiva' se inicializa con el valor inyectado desde el backend.
+    // Asegúrate de que tu ruta renderice la plantilla pasando 'memoria_activa'.
 
+    
+    // Al cargar el DOM se actualiza el botón de memoria y la posición del chat.
+    document.addEventListener("DOMContentLoaded", function(){
+      document.getElementById('memory-btn').innerHTML = `<i class="fas fa-brain"></i> Memoria: ${memoriaActiva ? 'ON' : 'OFF'}`;
+      updateChatPosition();
+    });
+    
     function processContent(text) {
       // Procesamiento mejorado de Markdown
       return text
@@ -452,7 +457,6 @@
       const sidebar = document.getElementById('sidebar');
       const chatContainer = document.getElementById('chatContainer');
       
-      // Para escritorio y tablet: ajusta el margen según el sidebar
       if (window.innerWidth > 600) {
         if (sidebar.classList.contains('collapsed')) {
           chatContainer.style.marginLeft = "auto";
@@ -462,7 +466,6 @@
           chatContainer.style.marginRight = "";
         }
       } else {
-        // En móvil, el chat ocupa el ancho completo
         chatContainer.style.margin = "0 auto";
       }
     }
@@ -471,10 +474,8 @@
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       if(window.innerWidth <= 600) {
-        // En móvil, usamos la clase "active" para mostrar/ocultar el sidebar (overlay)
         sidebar.classList.toggle('active');
       } else {
-        // En escritorio/tablet se colapsa el sidebar si se desea
         sidebar.classList.toggle('collapsed');
         updateChatPosition();
       }
@@ -539,13 +540,22 @@
       }
     }
 
+    // Función modificada para alternar el estado de memoria según la respuesta del servidor.
     function toggleMemoria() {
-      memoriaActiva = !memoriaActiva;
-      document.getElementById('memory-btn').innerHTML = 
-          `<i class="fas fa-brain"></i> Memoria: ${memoriaActiva ? 'ON' : 'OFF'}`;
-      
       fetch('/toggle_memoria', { method: 'POST' })
-          .catch(error => alert('Error actualizando memoria'));
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === "success") {
+            memoriaActiva = data.memory_mode;
+            document.getElementById('memory-btn').innerHTML = `<i class="fas fa-brain"></i> Memoria: ${memoriaActiva ? 'ON' : 'OFF'}`;
+          } else {
+            alert('Error al actualizar el estado de memoria');
+          }
+        })
+        .catch(error => {
+          console.error('Error actualizando memoria:', error);
+          alert('Error actualizando memoria');
+        });
     }
 
     function exportChat() {
@@ -618,7 +628,6 @@ Permite que la conversación se ramifique a partir de la respuesta y usa estas p
       .finally(() => showLoading(false));
     }
 
-    // Al iniciar, se actualiza la posición del chat container
     document.addEventListener("DOMContentLoaded", updateChatPosition);
     window.addEventListener("resize", updateChatPosition);
   </script>
