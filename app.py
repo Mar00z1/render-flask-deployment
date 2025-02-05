@@ -269,7 +269,7 @@ def chat():
         response = openai.chat.completions.create(
             model="gpt-4o-mini",  # ⚠️ Modelo actualizado
             messages=mensajes,
-            max_tokens=5000,
+            max_tokens=15000,
             temperature=0.7
         )
         bot_response = sanitizar_markdown(response.choices[0].message.content)
