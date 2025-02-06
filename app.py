@@ -409,6 +409,14 @@ def upload():
         db.session.add(file_message)
         db.session.commit()
 
+        confirmation_msg = Message(
+            user_id=current_user.id,
+            role='system',
+            content="Información del archivo procesada. Recuerda: has leído y comprendido el contenido del archivo subido."
+        )
+        db.session.add(confirmation_msg)
+        db.session.commit()
+
         # Nota: Si no deseas mostrar el contenido del archivo en el chat, solo responde un mensaje de confirmación.
         return jsonify({"message": "Archivo subido correctamente.", "content": file_content})
     else:
