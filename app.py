@@ -23,7 +23,11 @@ from flask_login import (
     login_required,
     current_user
 )
-from werkzeug.security import generate_password_hash, check_password_hash  # ⚠️ Nuevo import
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename  # Para manejo seguro de nombres de archivo
+
+import PyPDF2  # Para extraer texto de PDFs
+from docx import Document  # Para extraer texto de archivos DOCX
 
 # Configuración de la clave API de OpenAI
 openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -52,8 +56,8 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)  # ⚠️ Longitud aumentada para hashes
-    memory_mode = db.Column(db.Boolean, default=False)  # ⚠️ Nuevo campo para modo memoria
+    password = db.Column(db.String(255), nullable=False)  # Hash de la contraseña
+    memory_mode = db.Column(db.Boolean, default=False)  # Nuevo campo para modo memoria
     messages = db.relationship('Message', backref='user', lazy=True)
 
 class Message(db.Model):
@@ -89,7 +93,14 @@ system_prompt_content = (
     "Utiliza el historial de conversaciones si está disponible para adaptar la explicación al alumno según sus características de aprendizaje.\n"
     "Cualquier ecuacion que escribas la quiero en formato LaTex.\n"
     "Es muy importante que cada vez que hagas una pregunta conceptual, interrumpas tu explicación hasta obtener una respuesta. No sigas con la explicación hasta no tener una respuesta."
+    "Recuerda, tienes las capacidad de aceptar archivos de texto. Usalos para guiarte en las explicaciones."
 )
+
+# Configuración para subida de archivos
+ALLOWED_EXTENSIONS = {'txt', 'md', 'pdf', 'docx'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 ##############################################
 # Funciones Auxiliares                       #
@@ -149,7 +160,7 @@ def register():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         
-        if len(password) < 8:  # ⚠️ Validación de contraseña
+        if len(password) < 8:
             flash("La contraseña debe tener al menos 8 caracteres", "danger")
             return redirect(url_for('register'))
         
@@ -159,7 +170,7 @@ def register():
             
         new_user = User(
             username=username,
-            password=generate_password_hash(password),  # ⚠️ Hash de contraseña
+            password=generate_password_hash(password),
             memory_mode=False
         )
         db.session.add(new_user)
@@ -185,7 +196,7 @@ def login():
         password = request.form.get('password', '').strip()
         user = User.query.filter_by(username=username).first()
         
-        if user and check_password_hash(user.password, password):  # ⚠️ Verificación segura
+        if user and check_password_hash(user.password, password):
             login_user(user)
             flash("Inicio de sesión exitoso", "success")
             return redirect(url_for('index'))
@@ -205,11 +216,10 @@ def logout():
 # Rutas del Chat                             #
 ##############################################
 
-# Modificamos la ruta principal para inyectar el estado real de memory_mode en la plantilla.
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', memoria_activa=current_user.memory_mode)
+    return render_template('index.html', memoriaActiva=current_user.memory_mode)
 
 @app.route('/chat', methods=['POST'])
 @login_required
@@ -218,7 +228,6 @@ def chat():
     if not user_message:
         return jsonify({"response": "⚠️ Por favor escribe un mensaje válido"}), 400
 
-    # Manejar comando /clear
     if user_message.startswith('/clear'):
         try:
             Message.query.filter(
@@ -231,7 +240,6 @@ def chat():
             app.logger.error(f"Error al borrar historial: {str(e)}")
             return jsonify({"response": "⚠️ Error al borrar el historial"}), 500
 
-    # Guardar mensaje original del usuario
     user_msg = Message(
         user_id=current_user.id,
         role='user',
@@ -241,14 +249,11 @@ def chat():
     db.session.commit()
 
     try:
-        # Obtener historial desde la base de datos
         mensajes_db = Message.query.filter_by(user_id=current_user.id).order_by(Message.timestamp.asc()).all()
         
-        # Construir mensajes para OpenAI
         if current_user.memory_mode:
             mensajes = [{"role": msg.role, "content": msg.content} for msg in mensajes_db]
         else:
-            # Modo sin memoria: solo system prompt y último mensaje
             system_msg = next((msg for msg in mensajes_db if msg.role == 'system'), None)
             last_msg = mensajes_db[-1] if mensajes_db else None
             mensajes = []
@@ -257,7 +262,6 @@ def chat():
             if last_msg:
                 mensajes.append({"role": last_msg.role, "content": last_msg.content})
 
-        # Procesar comandos especiales
         if user_message.startswith('/'):
             comando = user_message.split()[0].lower()
             contenido = user_message[len(comando):].strip()
@@ -265,16 +269,14 @@ def chat():
             if prompt_comando:
                 mensajes.append({"role": "user", "content": prompt_comando})
 
-        # Llamada a OpenAI
         response = openai.chat.completions.create(
-            model="gpt-4o-mini",  # ⚠️ Modelo actualizado
+            model="gpt-4o-mini",
             messages=mensajes,
             max_tokens=15000,
             temperature=0.7
         )
         bot_response = sanitizar_markdown(response.choices[0].message.content)
         
-        # Guardar respuesta
         assistant_msg = Message(
             user_id=current_user.id,
             role='assistant',
@@ -312,7 +314,6 @@ def export_chat():
         app.logger.error(f"Error en exportación: {str(e)}")
         return jsonify({"response": "⚠️ Error al exportar el chat"}), 500
 
-# Endpoint modificado para alternar el modo memoria.
 @app.route('/toggle_memoria', methods=['POST'])
 @login_required
 def toggle_memoria():
@@ -351,7 +352,70 @@ def resumen():
         app.logger.error(f"Error en resumen: {str(e)}")
         return jsonify({"response": "⚠️ Error al generar el resumen"}), 500
 
+##############################################
+# Ruta para subir archivos (incluyendo PDF y DOCX)
+##############################################
+
+@app.route('/upload', methods=['POST'])
+@login_required
+def upload():
+    if 'file' not in request.files:
+        return jsonify({"error": "No se encontró el archivo en la petición."}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({"error": "No se seleccionó ningún archivo."}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_extension = filename.rsplit('.', 1)[1].lower()
+        try:
+            if file_extension == 'pdf':
+                try:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    text = ""
+                    for page in pdf_reader.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text += page_text + "\n"
+                    file_content = text if text.strip() != "" else "No se pudo extraer texto del PDF."
+                except Exception as e:
+                    app.logger.error(f"Error al procesar el PDF: {e}")
+                    return jsonify({"error": "Error al procesar el archivo PDF."}), 500
+            elif file_extension == 'docx':
+                try:
+                    doc = Document(file)
+                    text = ""
+                    for para in doc.paragraphs:
+                        text += para.text + "\n"
+                    file_content = text if text.strip() != "" else "No se pudo extraer texto del archivo DOCX."
+                except Exception as e:
+                    app.logger.error(f"Error al procesar el DOCX: {e}")
+                    return jsonify({"error": "Error al procesar el archivo DOCX."}), 500
+            else:
+                file_content = file.read().decode('utf-8')
+        except Exception as e:
+            app.logger.error(f"Error leyendo el archivo: {e}")
+            return jsonify({"error": "Error al leer el archivo."}), 500
+
+        # Se guarda el contenido extraído en la base de datos como mensaje (para el contexto de GPT)
+        file_message = Message(
+            user_id=current_user.id,
+            role='user',
+            content=f"[Archivo Subido: {filename}]\n\n{file_content}"
+        )
+        db.session.add(file_message)
+        db.session.commit()
+
+        # Nota: Si no deseas mostrar el contenido del archivo en el chat, solo responde un mensaje de confirmación.
+        return jsonify({"message": "Archivo subido correctamente.", "content": file_content})
+    else:
+        return jsonify({"error": "Tipo de archivo no permitido. Solo se permiten archivos de texto (.txt, .md), PDF (.pdf) y DOCX (.docx)."}), 400
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
+

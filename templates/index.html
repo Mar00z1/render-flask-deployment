@@ -50,7 +50,6 @@
       z-index: 1000;
     }
 
-    /* En móviles, el sidebar se oculta y se muestra como overlay */
     @media (max-width: 600px) {
       .sidebar {
         width: 250px;
@@ -61,20 +60,17 @@
       .sidebar.active {
         transform: translateX(0);
       }
-      /* Ajuste para el botón toggle en móvil */
       #sidebarToggle {
         left: 1rem;
       }
     }
 
-    /* Sidebar colapsado para escritorio */
     .sidebar.collapsed {
       width: 0;
       padding: 0;
       overflow: hidden;
     }
 
-    /* Botón Toggle */
     #sidebarToggle {
       position: fixed;
       top: 1rem;
@@ -94,7 +90,6 @@
       transform: translateY(-2px);
     }
 
-    /* Chat container */
     .chat-container {
       max-width: 800px;
       background: var(--card-bg);
@@ -205,7 +200,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Estilos para elementos Markdown */
     .bot-message h1,
     .bot-message h2,
     .bot-message h3 {
@@ -252,7 +246,6 @@
       50% { opacity: 0.5; }
     }
 
-    /* Menú de cursos y temas */
     .courses-menu {
       margin-top: 3rem;
     }
@@ -303,14 +296,12 @@
       color: white;
     }
 
-    /* Ajustes para tablet */
     @media (min-width: 600px) and (max-width: 1024px) {
       .chat-container {
         margin: 1rem auto;
       }
     }
 
-    /* Ajustes para móviles */
     @media (max-width: 600px) {
       .chat-container {
         width: 100%;
@@ -416,7 +407,6 @@
     </div>
 
     <div class="toolbar">
-      <!-- El botón Memoria se actualizará según el valor inyectado desde el backend -->
       <button onclick="toggleMemoria()" id="memory-btn">
         <i class="fas fa-brain"></i> Memoria
       </button>
@@ -425,6 +415,11 @@
       </button>
       <button onclick="showHelp()">
         <i class="fas fa-question-circle"></i> Ayuda
+      </button>
+      <!-- Input oculto para subir archivos; se permite .txt, .md y .pdf -->
+      <input type="file" id="file-input" onchange="uploadFile()" style="display: none;" accept=".txt,.md,.pdf,.docx">
+      <button onclick="document.getElementById('file-input').click();">
+        <i class="fas fa-upload"></i> Subir Archivo
       </button>
     </div>
 
@@ -441,18 +436,15 @@
 
   <script>
     let isDarkMode = false;
-    // La variable 'memoriaActiva' se inicializa con el valor inyectado desde el backend.
-    // Asegúrate de que tu ruta renderice la plantilla pasando 'memoria_activa'.
+    // La variable memoriaActiva se inicializa con el valor inyectado desde el backend.
+    // let memoriaActiva = {{ memoriaActiva|tojson }};
 
-    
-    // Al cargar el DOM se actualiza el botón de memoria y la posición del chat.
     document.addEventListener("DOMContentLoaded", function(){
       document.getElementById('memory-btn').innerHTML = `<i class="fas fa-brain"></i> Memoria: ${memoriaActiva ? 'ON' : 'OFF'}`;
       updateChatPosition();
     });
     
     function processContent(text) {
-      // Procesamiento mejorado de Markdown
       return text
         .replace(/^##### (.*$)/gm, '<h5>$1</h5>')
         .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
@@ -470,7 +462,6 @@
         .replace(/<\/ol>\n<ol>/g, '');
     }
 
-    // Actualiza la posición del chat container según el estado del sidebar
     function updateChatPosition() {
       const sidebar = document.getElementById('sidebar');
       const chatContainer = document.getElementById('chatContainer');
@@ -488,7 +479,6 @@
       }
     }
 
-    // Alterna el estado del sidebar
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       if(window.innerWidth <= 600) {
@@ -558,7 +548,6 @@
       }
     }
 
-    // Función modificada para alternar el estado de memoria según la respuesta del servidor.
     function toggleMemoria() {
       fetch('/toggle_memoria', { method: 'POST' })
         .then(response => response.json())
@@ -646,8 +635,45 @@ Permite que la conversación se ramifique a partir de la respuesta y usa estas p
       .finally(() => showLoading(false));
     }
 
+    async function uploadFile() {
+  const input = document.getElementById('file-input');
+  if (input.files.length === 0) return;
+
+  const file = input.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  showLoading(true); // Mostrar indicador de carga
+  
+  try {
+    const response = await fetch('/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      // En lugar de mostrar el contenido del archivo, solo se muestra un mensaje de confirmación.
+      const message = `Archivo "${file.name}" subido correctamente.`;
+      const chatBox = document.getElementById('chat-box');
+      chatBox.appendChild(createMessageElement(message, false));
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } else {
+      alert(data.error || 'Error al subir el archivo.');
+    }
+  } catch (error) {
+    console.error('Error al subir archivo:', error);
+    alert('Error al subir el archivo.');
+  } finally {
+    showLoading(false);
+    input.value = ''; // Reinicia el input para poder subir el mismo archivo de nuevo si se desea.
+  }
+}
+
+
     document.addEventListener("DOMContentLoaded", updateChatPosition);
     window.addEventListener("resize", updateChatPosition);
   </script>
 </body>
 </html>
+
