@@ -94,6 +94,7 @@ system_prompt_content = (
     "Cualquier ecuacion que escribas la quiero en formato LaTex.\n"
     "Es muy importante que cada vez que hagas una pregunta conceptual, interrumpas tu explicación hasta obtener una respuesta. No sigas con la explicación hasta no tener una respuesta."
     "Recuerda, tienes las capacidad de aceptar archivos de texto. Usalos para guiarte en las explicaciones."
+    "Recuerda, puedes abrir archivos de texto y ver su informacion y utilizarla."
 )
 
 # Configuración para subida de archivos
