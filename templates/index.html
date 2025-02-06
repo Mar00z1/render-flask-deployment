@@ -296,6 +296,35 @@
       color: white;
     }
 
+    /* Botón de logout */
+    .logout-btn {
+      background: var(--accent) !important;
+      padding: 0.8rem;
+      border-radius: 50%;
+      margin-left: 0.5rem;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 0.3rem;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    /* Ajustar botón modo oscuro para coincidir */
+    .dark-mode-toggle {
+      padding: 0.8rem;
+      border-radius: 50%;
+    }
+
+    /* Hover effects */
+    .logout-btn:hover,
+    .dark-mode-toggle:hover {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
+
+
     @media (min-width: 600px) and (max-width: 1024px) {
       .chat-container {
         margin: 1rem auto;
@@ -397,6 +426,9 @@
       </h1>
       <button class="dark-mode-toggle" onclick="toggleDarkMode()">
         <i class="fas fa-moon"></i>
+      </button>
+      <button class="logout-btn" onclick="window.location.href='/logout'">
+        <i class="fas fa-sign-out-alt"></i>
       </button>
     </div>
 
