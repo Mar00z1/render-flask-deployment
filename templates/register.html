@@ -52,6 +52,11 @@
       border-radius: 4px;
       font-size: 1rem;
     }
+    .password-hint {
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-top: 0.5rem;
+    }
     button {
       padding: 0.8rem;
       background: var(--secondary);
@@ -89,6 +94,7 @@
       <div>
         <label for="password">Contraseña:</label>
         <input type="password" id="password" name="password" placeholder="Ingresa tu contraseña" required>
+        <div class="password-hint">La contraseña debe tener al menos 8 caracteres.</div>
       </div>
       <button type="submit">
         <i class="fas fa-user-plus"></i> Registrarse
@@ -100,3 +106,4 @@
   </div>
 </body>
 </html>
+
